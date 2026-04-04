@@ -133,6 +133,12 @@ ul {
     --bcolor2: #F5F5F5;
 }
 
+/* Fix for stuck Bootstrap backdrops in Next.js */
+body:not(.modal-open):not(.offcanvas-open) .modal-backdrop,
+body:not(.modal-open):not(.offcanvas-open) .offcanvas-backdrop {
+    display: none !important;
+}
+
 ._layout {
     height: 100vh;
     display: flex;

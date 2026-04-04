@@ -1,8 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useActionState } from 'react';
+import { loginAction } from '../actions/authActions';
 
 export default function LoginPage() {
+  const [state, formAction, isPending] = useActionState(loginAction, null);
+
   return (
     <section className="_social_login_wrapper _layout_main_wrapper">
       <div className="_shape_one">
@@ -39,18 +43,41 @@ export default function LoginPage() {
                 </button>
                 <div className="_social_login_content_bottom_txt _mar_b40"> <span>Or</span>
                 </div>
-                <form className="_social_login_form">
+                
+                {state?.error && typeof state.error === 'string' && (
+                  <div className="alert alert-danger mb-4" role="alert">
+                    {state.error}
+                  </div>
+                )}
+
+                <form action={formAction} className="_social_login_form">
                   <div className="row">
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_login_form_input _mar_b14">
                         <label className="_social_login_label _mar_b8">Email</label>
-                        <input type="email" className="form-control _social_login_input" />
+                        <input 
+                          name="email" 
+                          type="email" 
+                          className={`form-control _social_login_input ${state?.error?.email ? 'is-invalid' : ''}`} 
+                          required
+                        />
+                        {state?.error?.email && (
+                          <div className="invalid-feedback d-block">{state.error.email[0]}</div>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_login_form_input _mar_b14">
                         <label className="_social_login_label _mar_b8">Password</label>
-                        <input type="password" className="form-control _social_login_input" />
+                        <input 
+                          name="password" 
+                          type="password" 
+                          className={`form-control _social_login_input ${state?.error?.password ? 'is-invalid' : ''}`} 
+                          required
+                        />
+                        {state?.error?.password && (
+                          <div className="invalid-feedback d-block">{state.error.password[0]}</div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -70,7 +97,13 @@ export default function LoginPage() {
                   <div className="row">
                     <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
                       <div className="_social_login_form_btn _mar_t40 _mar_b60">
-                        <button type="button" className="_social_login_form_btn_link _btn1">Login now</button>
+                        <button 
+                          disabled={isPending} 
+                          type="submit" 
+                          className="_social_login_form_btn_link _btn1"
+                        >
+                          {isPending ? 'Logging in...' : 'Login now'}
+                        </button>
                       </div>
                     </div>
                   </div>

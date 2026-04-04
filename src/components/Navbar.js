@@ -7,11 +7,15 @@ export default function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const notifyRef = useRef(null);
+  const profileRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(e) {
       if (notifyRef.current && !notifyRef.current.contains(e.target)) {
         setNotifyOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setIsProfileOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -141,7 +145,7 @@ export default function Navbar() {
                 </Link>
               </li>
             </ul>
-            <div className="_header_nav_profile">
+            <div className="_header_nav_profile" ref={profileRef}>
               <div className="_header_nav_profile_image">
                 <img src="/images/profile.png" alt="Profile" className="_nav_profile_img" />
               </div>

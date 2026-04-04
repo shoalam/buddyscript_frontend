@@ -1,8 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useActionState } from 'react';
+import { registerAction } from '../actions/authActions';
 
 export default function RegistrationPage() {
+  const [state, formAction, isPending] = useActionState(registerAction, null);
+
   return (
     <section className="_social_registration_wrapper _layout_main_wrapper">
       <div className="_shape_one">
@@ -42,31 +46,76 @@ export default function RegistrationPage() {
                 </button>
                 <div className="_social_registration_content_bottom_txt _mar_b40"> <span>Or</span>
                 </div>
-                <form className="_social_registration_form">
+
+                {state?.error && typeof state.error === 'string' && (
+                  <div className="alert alert-danger mb-4" role="alert">
+                    {state.error}
+                  </div>
+                )}
+
+                <form action={formAction} className="_social_registration_form">
                   <div className="row">
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_registration_form_input _mar_b14">
+                        <label className="_social_registration_label _mar_b8">Username</label>
+                        <input 
+                          name="username" 
+                          type="text" 
+                          className={`form-control _social_registration_input ${state?.error?.username ? 'is-invalid' : ''}`} 
+                          required
+                        />
+                        {state?.error?.username && (
+                          <div className="invalid-feedback d-block">{state.error.username[0]}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
+                      <div className="_social_registration_form_input _mar_b14">
                         <label className="_social_registration_label _mar_b8">Email</label>
-                        <input type="email" className="form-control _social_registration_input" />
+                        <input 
+                          name="email" 
+                          type="email" 
+                          className={`form-control _social_registration_input ${state?.error?.email ? 'is-invalid' : ''}`} 
+                          required
+                        />
+                        {state?.error?.email && (
+                          <div className="invalid-feedback d-block">{state.error.email[0]}</div>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_registration_form_input _mar_b14">
                         <label className="_social_registration_label _mar_b8">Password</label>
-                        <input type="password" className="form-control _social_registration_input" />
+                        <input 
+                          name="password" 
+                          type="password" 
+                          className={`form-control _social_registration_input ${state?.error?.password ? 'is-invalid' : ''}`} 
+                          required
+                        />
+                        {state?.error?.password && (
+                          <div className="invalid-feedback d-block">{state.error.password[0]}</div>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_registration_form_input _mar_b14">
                         <label className="_social_registration_label _mar_b8">Repeat Password</label>
-                        <input type="password" className="form-control _social_registration_input" />
+                        <input 
+                          name="confirmPassword" 
+                          type="password" 
+                          className={`form-control _social_registration_input ${state?.error?.confirmPassword ? 'is-invalid' : ''}`} 
+                          required
+                        />
+                        {state?.error?.confirmPassword && (
+                          <div className="invalid-feedback d-block">{state.error.confirmPassword[0]}</div>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="row">
                     <div className="col-lg-12 col-xl-12 col-md-12 col-sm-12">
                       <div className="form-check _social_registration_form_check">
-                        <input className="form-check-input _social_registration_form_check_input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" defaultChecked />
+                        <input className="form-check-input _social_registration_form_check_input" type="checkbox" name="terms" id="flexRadioDefault2" required />
                         <label className="form-check-label _social_registration_form_check_label" htmlFor="flexRadioDefault2">I agree to terms & conditions</label>
                       </div>
                     </div>
@@ -74,7 +123,13 @@ export default function RegistrationPage() {
                   <div className="row">
                     <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
                       <div className="_social_registration_form_btn _mar_t40 _mar_b60">
-                        <button type="button" className="_social_registration_form_btn_link _btn1">Register now</button>
+                        <button 
+                          disabled={isPending} 
+                          type="submit" 
+                          className="_social_registration_form_btn_link _btn1"
+                        >
+                          {isPending ? 'Registering...' : 'Register now'}
+                        </button>
                       </div>
                     </div>
                   </div>

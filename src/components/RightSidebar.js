@@ -1,8 +1,24 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { getUsersAction } from '@/app/actions/userActions';
+import { getImageUrl } from '@/utils/media';
 
 export default function RightSidebar() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      const res = await getUsersAction();
+      if (res?.users) {
+        setUsers(res.users);
+      }
+      setLoading(false);
+    }
+    fetchUsers();
+  }, []);
   return (
     <div className="_layout_right_sidebar_wrap">
       <div className="_layout_right_sidebar_inner">
@@ -53,38 +69,29 @@ export default function RightSidebar() {
             </form>
           </div>
           <div className="_feed_bottom_fixed">
-            {[
-              { name: 'Steve Jobs',      role: 'CEO of Apple',    img: '/images/people1.png', time: '5 minute ago', inactive: true  },
-              { name: 'Ryan Roslansky', role: 'CEO of Linkedin',  img: '/images/people2.png', time: null,           inactive: false },
-              { name: 'Dylan Field',    role: 'CEO of Figma',     img: '/images/people3.png', time: null,           inactive: false },
-              { name: 'Steve Jobs',     role: 'CEO of Apple',     img: '/images/people1.png', time: null,           inactive: false },
-              { name: 'Ryan Roslansky', role: 'CEO of Linkedin',  img: '/images/people2.png', time: null,           inactive: false },
-              { name: 'Dylan Field',    role: 'CEO of Figma',     img: '/images/people3.png', time: null,           inactive: false },
-              { name: 'Dylan Field',    role: 'CEO of Figma',     img: '/images/people3.png', time: null,           inactive: false },
-              { name: 'Steve Jobs',     role: 'CEO of Apple',     img: '/images/people1.png', time: '5 minute ago', inactive: true  },
-            ].map((friend, idx) => (
-              <div key={idx} className={`_feed_right_inner_area_card_ppl${friend.inactive ? ' _feed_right_inner_area_card_ppl_inactive' : ''}`}>
+            {loading ? (
+               <div style={{ padding: '20px', textAlign: 'center' }}>Loading suggested users...</div>
+            ) : users.length === 0 ? (
+               <div style={{ padding: '20px', textAlign: 'center' }}>No suggestions found.</div>
+            ) : users.map((user, idx) => (
+              <div key={user._id || idx} className="_feed_right_inner_area_card_ppl">
                 <div className="_feed_right_inner_area_card_ppl_box">
                   <div className="_feed_right_inner_area_card_ppl_image">
-                    <Link href="/profile">
-                      <img src={friend.img} alt="" className="_box_ppl_img" />
+                    <Link href={`/profile/${user._id}`}>
+                      <img src={getImageUrl(user.profilePic) || '/images/user_avatar.svg'} alt={user.username} className="_box_ppl_img" />
                     </Link>
                   </div>
                   <div className="_feed_right_inner_area_card_ppl_txt">
-                    <Link href="/profile">
-                      <h4 className="_feed_right_inner_area_card_ppl_title">{friend.name}</h4>
+                    <Link href={`/profile/${user._id}`}>
+                      <h4 className="_feed_right_inner_area_card_ppl_title">{user.username}</h4>
                     </Link>
-                    <p className="_feed_right_inner_area_card_ppl_para">{friend.role}</p>
+                    <p className="_feed_right_inner_area_card_ppl_para">Suggested Friend</p>
                   </div>
                 </div>
                 <div className="_feed_right_inner_area_card_ppl_side">
-                  {friend.time ? (
-                    <span>{friend.time}</span>
-                  ) : (
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 14 14">
                       <rect width="12" height="12" x="1" y="1" fill="#0ACF83" stroke="#fff" strokeWidth="2" rx="6" />
                     </svg>
-                  )}
                 </div>
               </div>
             ))}

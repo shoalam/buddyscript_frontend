@@ -3,8 +3,9 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { createPostAction } from '@/app/actions/postActions';
 import { useToast } from './ToastProvider';
+import { getImageUrl } from '@/utils/media';
 
-export default function CreatePost() {
+export default function CreatePost({ user }) {
   const [state, formAction, isPending] = useActionState(createPostAction, null);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
@@ -35,13 +36,13 @@ export default function CreatePost() {
       <form action={formAction} ref={formRef}>
         <div className="_feed_inner_text_area_box">
           <div className="_feed_inner_text_area_box_image">
-            <img src="/images/txt_img.png" alt="User Profile" className="_txt_img" />
+            <img src={getImageUrl(user?.profilePic) || "/images/user_avatar.svg"} alt={user?.username || "User"} title={user?.username || "User"} className="_txt_img" />
           </div>
           <div className="form-floating _feed_inner_text_area_box_form">
-            <textarea 
+            <textarea
               name="content"
-              className="form-control _textarea" 
-              placeholder="Write something ..." 
+              className="form-control _textarea"
+              placeholder="Write something ..."
               id="floatingTextarea"
               required
             ></textarea>
@@ -62,17 +63,17 @@ export default function CreatePost() {
 
         <div className="_feed_inner_text_area_bottom">
           <div className="_feed_inner_text_area_item">
-            <input 
-              type="file" 
-              name="image" 
-              ref={fileInputRef} 
-              style={{ display: 'none' }} 
+            <input
+              type="file"
+              name="image"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
               accept="image/*"
               onChange={handleFileChange}
             />
             <div className="_feed_inner_text_area_bottom_photo _feed_common">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="_feed_inner_text_area_bottom_photo_link"
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -96,23 +97,47 @@ export default function CreatePost() {
               </button>
             </div>
           </div>
-          <div className="_feed_inner_text_area_btn">
-            <button 
-              disabled={isPending}
-              type="submit" 
-              className="_feed_inner_text_area_btn_link"
-            >
-              {isPending ? (
-                 <span>Posting...</span>
-              ) : (
-                <>
-                  <svg className="_mar_img" xmlns="http://www.w3.org/2000/svg" width="14" height="13" fill="none" viewBox="0 0 14 13">
-                    <path fill="#fff" fillRule="evenodd" d="M6.37 7.879l2.438 3.955a.335.335 0 00.34.162c.068-.01.23-.05.289-.247l3.049-10.297a.348.348 0 00-.09-.35.341.341 0 00-.34-.088L1.75 4.03a.34.34 0 00-.247.289.343.343 0 00.16.347L5.666 7.17 9.2 3.597a.5.5 0 01.712.703L6.37 7.88zM9.097 13c-.464 0-.89-.236-1.14-.641L5.372 8.165l-4.237-2.65a1.336 1.336 0 01-.622-1.331c.074-.536.441-.96.957-1.112L11.774.054a1.347 1.347 0 011.67 1.682l-3.05 10.296A1.332 1.332 0 019.098 13z" clipRule="evenodd" />
-                  </svg>
-                  <span>Post</span>
-                </>
-              )}
-            </button>
+
+          <div className="_create_post_bottom_right" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div className="_visibility_selector">
+              <select
+                name="visibility"
+                className="form-select _visibility_select"
+                defaultValue="public"
+                style={{
+                  fontSize: '14px',
+                  padding: '5px 10px',
+                  borderRadius: '20px',
+                  border: '1px solid #E4E6EB',
+                  backgroundColor: '#F0F2F5',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: 'none'
+                }}
+              >
+                <option value="public">🌍 Public</option>
+                <option value="private">🔒 Private (Only Me)</option>
+              </select>
+            </div>
+
+            <div className="_feed_inner_text_area_btn">
+              <button
+                disabled={isPending}
+                type="submit"
+                className="_feed_inner_text_area_btn_link"
+              >
+                {isPending ? (
+                  <span>Posting...</span>
+                ) : (
+                  <>
+                    <svg className="_mar_img" xmlns="http://www.w3.org/2000/svg" width="14" height="13" fill="none" viewBox="0 0 14 13">
+                      <path fill="#fff" fillRule="evenodd" d="M6.37 7.879l2.438 3.955a.335.335 0 00.34.162c.068-.01.23-.05.289-.247l3.049-10.297a.348.348 0 00-.09-.35.341.341 0 00-.34-.088L1.75 4.03a.34.34 0 00-.247.289.343.343 0 00.16.347L5.666 7.17 9.2 3.597a.5.5 0 01.712.703L6.37 7.88zM9.097 13c-.464 0-.89-.236-1.14-.641L5.372 8.165l-4.237-2.65a1.336 1.336 0 01-.622-1.331c.074-.536.441-.96.957-1.112L11.774.054a1.347 1.347 0 011.67 1.682l-3.05 10.296A1.332 1.332 0 019.098 13z" clipRule="evenodd" />
+                    </svg>
+                    <span>Post</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </form>

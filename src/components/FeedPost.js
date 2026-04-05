@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { getImageUrl } from '@/utils/media';
 import CommentItem from './CommentItem';
 import { toggleLikeAction, getLikersAction, getCommentsAction, addCommentAction } from '@/app/actions/interactionActions';
+import { deletePostAction, updatePostVisibilityAction } from '@/app/actions/postActions';
+import { useToast } from './ToastProvider';
 
 const timeAgo = (date) => {
   if (!date) return "some time ago";
@@ -33,15 +35,12 @@ const buildCommentTree = (comments) => {
   // Second pass: hook children to parents
   comments.forEach(comment => {
     if (comment.parentComment) {
-      // It's a reply
       if (commentMap[comment.parentComment]) {
         commentMap[comment.parentComment].replies.push(commentMap[comment._id]);
       } else {
-         // Parent not found (e.g. deleted), push to roots or ignore. We'll push to roots for safety.
          roots.push(commentMap[comment._id]);
       }
     } else {
-      // It's a top-level comment
       roots.push(commentMap[comment._id]);
     }
   });
@@ -49,9 +48,10 @@ const buildCommentTree = (comments) => {
   return roots;
 };
 
-export default function FeedPost({ _id, user, activeUser, createdAt, content, mediaUrl, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, shares = 0 }) {
+export default function FeedPost({ _id, user, activeUser, createdAt, content, mediaUrl, visibility = 'public', likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, shares = 0 }) {
 
   const [mounted, setMounted] = useState(false);
+  const toast = useToast();
   
   // Interaction States
   const [isLiked, setIsLiked] = useState(false);
@@ -81,13 +81,10 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
       if (!_id || !activeUser?._id) return;
       const res = await getLikersAction(_id);
       if (res.success && isMounted) {
-        // Find if active user is in likers array
         const userLiked = res.likers.some(liker => 
             liker.user?._id === activeUser._id || liker.user === activeUser._id
         );
         setIsLiked(userLiked);
-        
-        // Save recent likers for display (up to 5 for the UI)
         setLikersList(res.likers.slice(0, 5));
       }
     }
@@ -122,34 +119,49 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleVisibilityToggle = async () => {
+    const newVisibility = visibility === 'public' ? 'private' : 'public';
+    const res = await updatePostVisibilityAction(_id, newVisibility);
+    if (!res.success) {
+      toast.error(res.error);
+    } else {
+      toast.success(`Post is now ${newVisibility === 'private' ? 'Only Me' : 'Public'}`);
+    }
+    setDropdownOpen(false);
+  };
+
+  const handleDelete = async () => {
+    if (confirm('Are you sure you want to delete this post?')) {
+      const res = await deletePostAction(_id);
+      if (!res.success) {
+        toast.error(res.error);
+      } else {
+        toast.success('Post deleted');
+      }
+    }
+    setDropdownOpen(false);
+  };
+
   const author = user?.username || 'Unknown';
   const authorImg = getImageUrl(user?.profilePic) || '/images/user_avatar.svg';
   const time = mounted ? timeAgo(createdAt) : 'Just now';
   const image = getImageUrl(mediaUrl);
+  const isOwner = activeUser?._id === (user?._id || user);
 
   const handleLike = async () => {
     if (!activeUser) return;
-    
-    // Optimistic UI update
     const previousIsLiked = isLiked;
     const previousLikesCount = likesCount;
     const previousLikersList = [...likersList];
-
     setIsLiked(!isLiked);
     setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
-    
     if (isLiked) {
-       // Remove activeUser from likersList
        setLikersList(prev => prev.filter(liker => liker.user?._id !== activeUser._id));
     } else {
-       // Add activeUser to likersList
        setLikersList(prev => [{ user: activeUser }, ...prev].slice(0, 5));
     }
-
     const res = await toggleLikeAction(_id, 'Post');
-    
     if (!res.success) {
-      // Revert if API fails
       setIsLiked(previousIsLiked);
       setLikesCount(previousLikesCount);
       setLikersList(previousLikersList);
@@ -159,25 +171,17 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!commentInput.trim() || isSubmitting) return;
-
     setIsSubmitting(true);
-    
-    // No parent needed for top-level comment
     const res = await addCommentAction(_id, commentInput);
-    
     if (res.success) {
-      // Append new comment to top-level list
       setCommentsList(prev => [...prev, { ...res.comment, replies: [] }]);
       setCommentsCount(prev => prev + 1);
       setCommentInput('');
     }
-    
     setIsSubmitting(false);
   };
 
   const handleReplyAdded = (newReply) => {
-     // Re-trigger comments fetch to rebuild tree correctly
-     // This is the simplest way to handle nested state without complex deep cloning
      async function refetch() {
          const res = await getCommentsAction(_id);
          if (res.success) {
@@ -191,8 +195,6 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
   return (
     <div className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16">
       <div className="_feed_inner_timeline_content _padd_r24 _padd_l24">
-
-        {/* Post Header */}
         <div className="_feed_inner_timeline_post_top">
           <div className="_feed_inner_timeline_post_box">
             <div className="_feed_inner_timeline_post_box_image">
@@ -200,14 +202,27 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
             </div>
             <div className="_feed_inner_timeline_post_box_txt">
               <h4 className="_feed_inner_timeline_post_box_title">{author}</h4>
-              <p className="_feed_inner_timeline_post_box_para">
-                {time} .{' '}
-                <a href="#0">Public</a>
+              <p className="_feed_inner_timeline_post_box_para" style={{ display: 'flex', alignItems: 'center' }}>
+                {time} <span style={{ margin: '0 5px' }}>.</span>
+                <span className="_post_visibility_label" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  {visibility === 'private' ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" title="Private">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" title="Public">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                  )}
+                  <span style={{ fontSize: '12px' }}>{visibility === 'private' ? 'Only Me' : 'Public'}</span>
+                </span>
               </p>
             </div>
           </div>
 
-          {/* Dropdown Menu */}
           <div className="_feed_inner_timeline_post_box_dropdown" ref={dropdownRef}>
             <div className="_feed_timeline_post_dropdown">
               <button
@@ -228,35 +243,61 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
               <div className="_feed_timeline_dropdown show">
                 <ul className="_feed_timeline_dropdown_list">
                   <li className="_feed_timeline_dropdown_item">
-                    <a href="#0" className="_feed_timeline_dropdown_link">
+                    <button className="_feed_timeline_dropdown_link" style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left' }}>
                       <span>
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 18 18">
                           <path stroke="#1890FF" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M14.25 15.75L9 12l-5.25 3.75v-12a1.5 1.5 0 011.5-1.5h7.5a1.5 1.5 0 011.5 1.5v12z" />
                         </svg>
                       </span>
                       Save Post
-                    </a>
+                    </button>
                   </li>
-                  <li className="_feed_timeline_dropdown_item">
-                    <a href="#0" className="_feed_timeline_dropdown_link">
-                      <span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 18 18">
-                          <path stroke="#1890FF" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M14.25 2.25H3.75a1.5 1.5 0 00-1.5 1.5v10.5a1.5 1.5 0 001.5 1.5h10.5a1.5 1.5 0 001.5-1.5V3.75a1.5 1.5 0 00-1.5-1.5zM6.75 6.75l4.5 4.5M11.25 6.75l-4.5 4.5" />
-                        </svg>
-                      </span>
-                      Hide
-                    </a>
-                  </li>
+                  {isOwner && (
+                    <>
+                      <li className="_feed_timeline_dropdown_item">
+                        <button onClick={handleVisibilityToggle} className="_feed_timeline_dropdown_link" style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left' }}>
+                          <span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#1890FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                {visibility === 'public' ? (
+                                    <>
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </>
+                                ) : (
+                                    <>
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                    </>
+                                )}
+                            </svg>
+                          </span>
+                          Make it {visibility === 'public' ? 'Private' : 'Public'}
+                        </button>
+                      </li>
+                      <li className="_feed_timeline_dropdown_item">
+                        <button onClick={handleDelete} className="_feed_timeline_dropdown_link" style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', color: '#ff4d4f' }}>
+                          <span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#ff4d4f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                          </span>
+                          Delete Post
+                        </button>
+                      </li>
+                    </>
+                  )}
                 </ul>
               </div>
             )}
           </div>
         </div>
 
-        {/* Post Title */}
         <h4 className="_feed_inner_timeline_post_title">{content}</h4>
 
-        {/* Post Image */}
         {image && (
           <div className="_feed_inner_timeline_image">
             <img src={image} alt="" className="_time_img" />
@@ -264,7 +305,6 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
         )}
       </div>
 
-      {/* Total Reacts Row */}
       <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
         <div className="_feed_inner_timeline_total_reacts_image" style={{ display: 'flex', alignItems: 'center' }}>
           {likesCount > 0 ? (
@@ -289,7 +329,6 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
           )}
         </div>
         <div className="_feed_inner_timeline_total_reacts_txt">
-
           <p className="_feed_inner_timeline_total_reacts_para1">
             <a href="#0"><span>{commentsCount}</span> Comment(s)</a>
           </p>
@@ -297,7 +336,6 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
         </div>
       </div>
 
-      {/* Reaction Bar */}
       <div className="_feed_inner_timeline_reaction">
         <button 
           className={`_feed_inner_timeline_reaction_emoji _feed_reaction ${isLiked ? '_feed_reaction_active' : ''}`}
@@ -337,7 +375,6 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
         </button>
       </div>
 
-      {/* Main Post Comment Input Box */}
       <div className="_feed_inner_timeline_cooment_area" style={{marginBottom: "20px"}}>
         <div className="_feed_inner_comment_box">
           <form className="_feed_inner_comment_box_form" onSubmit={handleCommentSubmit} style={{alignItems: "center"}}>
@@ -366,10 +403,8 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
         </div>
       </div>
 
-      {/* Comments Thread Rendering */}
       {commentsCount > 0 && (
          <div className="_timline_comment_main" style={{padding: '0 24px'}}>
-             {/* Map over the roots of the comment tree */}
              {commentsList.map(comment => (
                  <CommentItem 
                     key={comment._id} 

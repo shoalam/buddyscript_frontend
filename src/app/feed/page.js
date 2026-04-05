@@ -47,7 +47,7 @@ export default async function Home() {
                 <div className="_layout_middle_inner">
                   <StorySection />
 
-                  <CreatePost />
+                  <CreatePost user={activeUser} />
 
                   {error && <div className="alert alert-danger">{error}</div>}
 

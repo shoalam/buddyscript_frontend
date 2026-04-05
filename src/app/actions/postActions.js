@@ -115,3 +115,91 @@ export async function createPostAction(prevState, formData) {
 }
 
 
+/**
+ * Delete a post.
+ * @param {string} postId 
+ * @returns {Promise<{success?: boolean, error?: string}>}
+ */
+export async function deletePostAction(postId) {
+  const cookieStore = await cookies();
+  let token = cookieStore.get('token')?.value;
+
+  async function performDelete(authToken) {
+    return fetch(`${API_URL}/api/posts/${postId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': authToken ? `Bearer ${authToken}` : '',
+      },
+    });
+  }
+
+  try {
+    let response = await performDelete(token);
+
+    if (response.status === 401) {
+      const refreshResult = await refreshTokenAction();
+      if (refreshResult.success) {
+        response = await performDelete(refreshResult.token);
+      }
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.message || 'Failed to delete post' };
+    }
+
+    revalidatePath('/feed');
+    return { success: true };
+  } catch (error) {
+    console.error('[deletePostAction] Error:', error);
+    return { success: false, error: 'Network error occurred' };
+  }
+}
+
+/**
+ * Update post visibility.
+ * @param {string} postId 
+ * @param {string} visibility 
+ * @returns {Promise<{success?: boolean, error?: string}>}
+ */
+export async function updatePostVisibilityAction(postId, visibility) {
+  const cookieStore = await cookies();
+  let token = cookieStore.get('token')?.value;
+
+  async function performUpdate(authToken) {
+    return fetch(`${API_URL}/api/posts/${postId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': authToken ? `Bearer ${authToken}` : '',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ visibility }),
+    });
+  }
+
+  try {
+    let response = await performUpdate(token);
+
+    if (response.status === 401) {
+      const refreshResult = await refreshTokenAction();
+      if (refreshResult.success) {
+        response = await performUpdate(refreshResult.token);
+      }
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.message || 'Failed to update visibility' };
+    }
+
+    revalidatePath('/feed');
+    return { success: true };
+  } catch (error) {
+    console.error('[updatePostVisibilityAction] Error:', error);
+    return { success: false, error: 'Network error occurred' };
+  }
+}
+
+

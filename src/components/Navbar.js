@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { logoutAction, getMeAction } from '@/app/actions/authActions';
+import { getNotificationsAction, markAllNotificationsReadAction } from '@/app/actions/notificationActions';
 import { useToast } from './ToastProvider';
 import { getImageUrl } from '@/utils/media';
 
@@ -15,6 +16,8 @@ export default function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const notifyRef = useRef(null);
   const profileRef = useRef(null);
 
@@ -41,8 +44,24 @@ export default function Navbar() {
         setUser(res.user);
       }
     }
+    async function fetchNotifications() {
+      const res = await getNotificationsAction();
+      if (res?.success) {
+        setNotifications(res.notifications);
+        setUnreadCount(res.unreadCount);
+      }
+    }
     fetchUser();
+    fetchNotifications();
   }, []);
+
+  const handleMarkAllRead = async () => {
+    const res = await markAllNotificationsReadAction();
+    if (res?.success) {
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    }
+  };
 
   const userName = user?.username || 'User';
   const userPic = getImageUrl(user?.profilePic) || '/images/user_avatar.svg';
@@ -111,7 +130,7 @@ export default function Navbar() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" fill="none" viewBox="0 0 20 22">
                     <path fill="#000" fillOpacity=".6" fillRule="evenodd" d="M7.547 19.55c.533.59 1.218.915 1.93.915.714 0 1.403-.324 1.938-.916a.777.777 0 011.09-.056c.318.284.344.77.058 1.084-.832.917-1.927 1.423-3.086 1.423h-.002c-1.155-.001-2.248-.506-3.077-1.424a.762.762 0 01.057-1.083.774.774 0 011.092.057zM9.527 0c4.58 0 7.657 3.543 7.657 6.85 0 1.702.436 2.424.899 3.19.457.754.976 1.612.976 3.233-.36 4.14-4.713 4.478-9.531 4.478-4.818 0-9.172-.337-9.528-4.413-.003-1.686.515-2.544.973-3.299l.161-.27c.398-.679.737-1.417.737-2.918C1.871 3.543 4.948 0 9.528 0zm0 1.535c-3.6 0-6.11 2.802-6.11 5.316 0 2.127-.595 3.11-1.12 3.978-.422.697-.755 1.247-.755 2.444.173 1.93 1.455 2.944 7.986 2.944 6.494 0 7.817-1.06 7.988-3.01-.003-1.13-.336-1.681-.757-2.378-.526-.868-1.12-1.851-1.12-3.978 0-2.514-2.51-5.316-6.111-5.316z" clipRule="evenodd" />
                   </svg>
-                  <span className="_counting">6</span>
+                  {unreadCount > 0 && <span className="_counting">{unreadCount}</span>}
                 </button>
 
                 {/* Notification Dropdown */}
@@ -128,7 +147,9 @@ export default function Navbar() {
                       </button>
                       <div className="_notifications_drop_right">
                         <ul className="_notification_list">
-                          <li className="_notification_item"><span className="_notification_link">Mark as all read</span></li>
+                          <li className="_notification_item" onClick={handleMarkAllRead} style={{ cursor: 'pointer' }}>
+                             <span className="_notification_link">Mark as all read</span>
+                          </li>
                           <li className="_notification_item"><span className="_notification_link">Notifications settings</span></li>
                           <li className="_notification_item"><span className="_notification_link">Open Notifications</span></li>
                         </ul>
@@ -140,37 +161,35 @@ export default function Navbar() {
                       <button className="_notifications_btn_link">All</button>
                       <button className="_notifications_btn_link1">Unread</button>
                     </div>
-                    <div className="_notifications_all">
-                      {[
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                        { img: '/images/friend-req.png', text: <><span className="_notify_txt_link">Steve Jobs</span> posted a link in your timeline.</> },
-                        { img: '/images/profile-1.png',  text: <>An admin changed the name of the group <span className="_notify_txt_link">Freelacer usa</span> to <span className="_notify_txt_link">Freelacer usa</span></> },
-                      ].map((n, i) => (
-                        <div key={i} className="_notification_box">
-                          <div className="_notification_image">
-                            <img src={n.img} alt="Image" className="_notify_img" />
+                    <div className="_notifications_all" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                      {notifications.length === 0 ? (
+                         <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>No notifications yet</div>
+                      ) : notifications.map((n) => {
+                        const senderName = n.sender?.username || 'Someone';
+                        let actionText = '';
+                        if (n.type === 'like') actionText = 'liked your post.';
+                        if (n.type === 'comment') actionText = 'commented on your post.';
+                        if (n.type === 'post') actionText = 'created a new post.';
+                        
+                        // Parse time ago simple string
+                        const createdDate = new Date(n.createdAt);
+                        const mins = Math.floor((new Date() - createdDate) / 60000);
+                        const timeStr = mins < 1 ? 'Just now' : (mins < 60 ? `${mins} minutes ago` : `${Math.floor(mins/60)} hours ago`);
+
+                        return (
+                          <div key={n._id} className="_notification_box" style={{ backgroundColor: n.read ? '#fff' : '#f0f8ff' }}>
+                            <div className="_notification_image">
+                              <img src={getImageUrl(n.sender?.profilePic) || '/images/user_avatar.svg'} alt={senderName} className="_notify_img" />
+                            </div>
+                            <div className="_notification_txt">
+                              <p className="_notification_para">
+                                <span className="_notify_txt_link">{senderName}</span> {actionText}
+                              </p>
+                              <div className="_nitification_time"><span>{timeStr}</span></div>
+                            </div>
                           </div>
-                          <div className="_notification_txt">
-                            <p className="_notification_para">{n.text}</p>
-                            <div className="_nitification_time"><span>42 minutes ago</span></div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

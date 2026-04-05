@@ -2,12 +2,50 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { logoutAction, getMeAction } from '@/app/actions/authActions';
+import { useToast } from './ToastProvider';
+import { getImageUrl } from '@/utils/media';
+
 
 export default function Navbar() {
+  const router = useRouter();
+  const toast = useToast();
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [user, setUser] = useState(null);
   const notifyRef = useRef(null);
   const profileRef = useRef(null);
+
+
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await logoutAction();
+      if (res?.success) {
+        toast.success('Logged out successfully!');
+        router.push('/login');
+        router.refresh();
+      }
+    } catch (err) {
+      toast.error('Logout failed. Please try again.');
+    }
+  };
+
+
+  useEffect(() => {
+    async function fetchUser() {
+      const res = await getMeAction();
+      if (res?.user) {
+        setUser(res.user);
+      }
+    }
+    fetchUser();
+  }, []);
+
+  const userName = user?.username || 'User';
+  const userPic = getImageUrl(user?.profilePic) || '/images/user_avatar.svg';
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -22,13 +60,14 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+
   return (
     <>
       {/* Desktop Menu */}
       <nav className="navbar navbar-expand-lg navbar-light _header_nav _padd_t10">
         <div className="container _custom_container">
           <div className="_logo_wrap">
-            <Link className="navbar-brand" href="/">
+            <Link className="navbar-brand" href="/feed">
               <img src="/images/logo.svg" alt="Logo" className="_nav_logo" />
             </Link>
           </div>
@@ -47,7 +86,7 @@ export default function Navbar() {
             </div>
             <ul className="navbar-nav mb-2 mb-lg-0 _header_nav_list ms-auto _mar_r8">
               <li className="nav-item _header_nav_item">
-                <Link className="nav-link _header_nav_link_active _header_nav_link" aria-current="page" href="/">
+                <Link className="nav-link _header_nav_link_active _header_nav_link" aria-current="page" href="/feed">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="21" fill="none" viewBox="0 0 18 21">
                     <path className="_home_active" stroke="#000" strokeWidth="1.5" strokeOpacity=".6" d="M1 9.924c0-1.552 0-2.328.314-3.01.313-.682.902-1.187 2.08-2.196l1.143-.98C6.667 1.913 7.732 1 9 1c1.268 0 2.333.913 4.463 2.738l1.142.98c1.179 1.01 1.768 1.514 2.081 2.196.314.682.314 1.458.314 3.01v4.846c0 2.155 0 3.233-.67 3.902-.669.67-1.746.67-3.901.67H5.57c-2.155 0-3.232 0-3.902-.67C1 18.002 1 16.925 1 14.77V9.924z" />
                     <path className="_home_active" stroke="#000" strokeOpacity=".6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11.857 19.341v-5.857a1 1 0 00-1-1H7.143a1 1 0 00-1 1v5.857" />
@@ -147,10 +186,11 @@ export default function Navbar() {
             </ul>
             <div className="_header_nav_profile" ref={profileRef}>
               <div className="_header_nav_profile_image">
-                <img src="/images/profile.png" alt="Profile" className="_nav_profile_img" />
+                <img src={userPic} alt="Profile" className="_nav_profile_img" />
               </div>
               <div className="_header_nav_dropdown">
-                <p className="_header_nav_para">Dylan Field</p>
+                <p className="_header_nav_para">{userName}</p>
+
                 <button
                   id="_profile_drop_show_btn"
                   className={`_header_nav_dropdown_btn _dropdown_toggle ${isProfileOpen ? 'show' : ''}`}
@@ -166,13 +206,14 @@ export default function Navbar() {
               <div id="_prfoile_drop" className={`_nav_profile_dropdown _profile_dropdown ${isProfileOpen ? 'show' : ''}`}>
                 <div className="_nav_profile_dropdown_info">
                   <div className="_nav_profile_dropdown_image">
-                    <img src="/images/profile.png" alt="Profile" className="_nav_drop_img" />
+                    <img src={userPic} alt="Profile" className="_nav_drop_img" />
                   </div>
                   <div className="_nav_profile_dropdown_info_txt">
-                    <h4 className="_nav_dropdown_title">Dylan Field</h4>
+                    <h4 className="_nav_dropdown_title">{userName}</h4>
                     <Link href="/profile" className="_nav_drop_profile">View Profile</Link>
                   </div>
                 </div>
+
                 <hr />
                 <ul className="_nav_dropdown_list">
                   <li className="_nav_dropdown_list_item">
@@ -201,7 +242,11 @@ export default function Navbar() {
                     </Link>
                   </li>
                   <li className="_nav_dropdown_list_item">
-                    <Link href="/logout" className="_nav_dropdown_link">
+                    <button 
+                      onClick={handleLogout} 
+                      className="_nav_dropdown_link"
+                      style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                    >
                       <div className="_nav_drop_info">
                         <span>
                           <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="none" viewBox="0 0 19 19">
@@ -210,8 +255,9 @@ export default function Navbar() {
                         </span>
                         Log Out
                       </div>
-                    </Link>
+                    </button>
                   </li>
+
                 </ul>
               </div>
             </div>
@@ -228,7 +274,7 @@ export default function Navbar() {
                 <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                   <div className="_header_mobile_menu_top_inner">
                     <div className="_header_mobile_menu_logo">
-                      <Link href="/" className="_mobile_logo_link">
+                      <Link href="/feed" className="_mobile_logo_link">
                         <img src="/images/logo.svg" alt="Logo" className="_nav_logo" />
                       </Link>
                     </div>
@@ -258,7 +304,7 @@ export default function Navbar() {
               <div className="col-xl-12 col-lg-12 col-md-12">
                 <ul className="_mobile_navigation_bottom_list">
                   <li className="_mobile_navigation_bottom_item">
-                    <Link href="/" className="_mobile_navigation_bottom_link _mobile_navigation_bottom_link_active">
+                    <Link href="/feed" className="_mobile_navigation_bottom_link _mobile_navigation_bottom_link_active">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="27" fill="none" viewBox="0 0 24 27">
                         <path className="_mobile_svg" fill="#000" fillOpacity=".6" stroke="#666666" strokeWidth="1.5" d="M1 13.042c0-2.094 0-3.141.431-4.061.432-.92 1.242-1.602 2.862-2.965l1.571-1.321C8.792 2.232 10.256 1 12 1c1.744 0 3.208 1.232 6.136 3.695l1.572 1.321c1.62 1.363 2.43 2.044 2.86 2.965.432.92.432 1.967.432 4.06v6.54c0 2.908 0 4.362-.92 5.265-.921.904-2.403.904-5.366.904H7.286c-2.963 0-4.445 0-5.365-.904C1 23.944 1 22.49 1 19.581v-6.54z" />
                         <path fill="#fff" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.07 18.497h5.857v7.253H9.07v-7.253z" />

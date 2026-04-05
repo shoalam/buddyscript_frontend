@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
-  const jwt = request.cookies.get('jwt')?.value;
+  const token = request.cookies.get('token')?.value;
+  const refreshToken = request.cookies.get('refreshToken')?.value;
 
-  // Protected routes: any route that isn't login or registration (or static assets)
-  const isAuthRoute = pathname === '/login' || pathname === '/registration';
+  // Static assets and internal next paths are always allowed
   const isPublicFile = pathname.startsWith('/_next') || 
                        pathname.startsWith('/images') || 
                        pathname.startsWith('/favicon.ico');
@@ -14,20 +14,23 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // Redirect to login if NOT logged in and trying to access private route
-  if (!jwt && !isAuthRoute) {
+  // Auth routes are only for guests
+  const isAuthRoute = pathname === '/login' || pathname === '/registration';
+
+  // 1. If NOT logged in (at all) and not on an auth route, redirect to login
+  if (!token && !refreshToken && !isAuthRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect to / (feed) if ALREADY logged in and trying to access login/registration
-  if (jwt && isAuthRoute) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // 2. If ALREADY logged in and on an auth route, redirect to /feed
+  if ((token || refreshToken) && isAuthRoute) {
+    return NextResponse.redirect(new URL('/feed', request.url));
   }
+
 
   return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
   matcher: [
     /*
@@ -41,3 +44,4 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|images).*)',
   ],
 };
+

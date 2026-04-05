@@ -5,6 +5,7 @@ import "@/styles/main.css";
 import "@/styles/responsive.css";
 import BootstrapClient from "@/components/BootstrapClient";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ToastProvider } from "@/components/ToastProvider";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -25,10 +26,13 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body className={poppins.className}>
         {/* <BootstrapClient /> */}
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <ToastProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </ToastProvider>
       </body>
     </html>
   );
 }
+

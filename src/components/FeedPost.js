@@ -31,6 +31,7 @@ const timeAgo = (date) => {
   interval = seconds / 3600;
   if (interval > 1) return Math.floor(interval) + " hours ago";
   interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + " minutes ago";
   return Math.floor(seconds) + " seconds ago";
 };
 
@@ -208,6 +209,7 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
       const likersRes = await getLikersAction(_id, 'Post');
       if (likersRes.success) {
         setReactionCounts(likersRes.countsByReaction || {});
+        setLikersList(likersRes.likers.slice(0, 9));
       }
     } else {
       setUserReaction(previousReaction);
@@ -481,7 +483,9 @@ export default function FeedPost({ _id, user, activeUser, createdAt, content, me
                 {userReaction ? (
                   <>
                     <span style={{ fontSize: '20px' }}>{REACTIONS.find(r => r.type === userReaction)?.icon}</span>
-                    <span style={{ color: REACTIONS.find(r => r.type === userReaction)?.color || '#1890FF', fontWeight: 'bold' }}>{userReaction}</span>
+                    <span style={{ color: REACTIONS.find(r => r.type === userReaction)?.color || '#1890FF', fontWeight: 'bold' }}>
+                      {userReaction === 'Like' ? 'Unlike' : userReaction}
+                    </span>
                   </>
                 ) : (
                   <>

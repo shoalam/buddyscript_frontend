@@ -298,7 +298,7 @@ export default function CommentItem({ comment, postId, activeUser, onCommentModi
                       color: userReaction ? (REACTIONS.find(r => r.type === userReaction)?.color || '#1890FF') : 'inherit',
                       fontWeight: userReaction ? 'bold' : '400'
                   }}>
-                    {userReaction || 'Like'}
+                    {userReaction ? (userReaction === 'Like' ? 'Unlike' : REACTIONS.find(r => r.type === userReaction)?.type || 'Unlike') : 'Like'}
                   </span>
                 </li>
                 <li style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => setIsReplying(!isReplying)}>

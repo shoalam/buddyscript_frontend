@@ -13,7 +13,7 @@ export function ThemeProvider({ children }) {
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
-      <div className={`_layout _layout_main_wrapper ${isDarkMode ? '_dark_wrapper' : ''}`}>
+      <div className={isDarkMode ? '_dark_wrapper' : ''}>
         {/* Switching Btn */}
         <div className="_layout_mode_swithing_btn">
           <button type="button" className="_layout_swithing_btn_link" onClick={toggleTheme}>

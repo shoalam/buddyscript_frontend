@@ -45,12 +45,12 @@ async function fetchWithRetry(url, options = {}) {
 }
 
 
-export async function toggleLikeAction(targetId, targetType = 'Post') {
+export async function toggleLikeAction(targetId, targetType = 'Post', reactionType = 'Like') {
   try {
     const response = await fetchWithRetry(`${API_URL}/api/posts/${targetId}/likes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetType })
+      body: JSON.stringify({ targetType, reactionType })
     });
 
     if (response.status === 401) return { success: false, error: 'Unauthorized' };
@@ -62,17 +62,25 @@ export async function toggleLikeAction(targetId, targetType = 'Post') {
   }
 }
 
-export async function getLikersAction(targetId) {
+export async function getLikersAction(targetId, targetType = null) {
   try {
-    // This is Public/Auth route, so token is optional, but we'll try to include it if available
-    const response = await fetchWithRetry(`${API_URL}/api/posts/${targetId}/likes`, {
+    let url = `${API_URL}/api/posts/${targetId}/likes`;
+    if (targetType) {
+      url += `?targetType=${encodeURIComponent(targetType)}`;
+    }
+
+    const response = await fetchWithRetry(url, {
       method: 'GET'
     });
 
     if (!response.ok) return { success: false, error: 'Failed to fetch likers' };
 
     const data = await response.json();
-    return { success: true, likers: data.likers };
+    return { 
+      success: true, 
+      likers: data.likers, 
+      countsByReaction: data.countsByReaction 
+    };
   } catch (error) {
     return { success: false, error: 'Network error occurred' };
   }
@@ -105,9 +113,56 @@ export async function addCommentAction(postId, content, parentCommentId = null) 
       body: JSON.stringify(payload)
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      return { success: false, error: 'Server returned a non-JSON response.' };
+    }
 
     if (!response.ok) return { success: false, error: data.message || 'Failed to post comment' };
+
+    return { success: true, comment: data.comment };
+  } catch (error) {
+    return { success: false, error: 'Network error occurred' };
+  }
+}
+
+export async function deleteCommentAction(commentId) {
+  try {
+    const response = await fetchWithRetry(`${API_URL}/api/posts/comments/${commentId}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      return { success: false, error: data.message || 'Failed to delete comment' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Network error occurred' };
+  }
+}
+
+export async function updateCommentAction(commentId, content) {
+  try {
+    const response = await fetchWithRetry(`${API_URL}/api/posts/comments/${commentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    });
+
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      return { success: false, error: 'Server returned a non-JSON response.' };
+    }
+
+    if (!response.ok) return { success: false, error: data.message || 'Failed to update comment' };
 
     return { success: true, comment: data.comment };
   } catch (error) {

@@ -44,7 +44,6 @@ export default function CreatePost({ user }) {
               className="form-control _textarea"
               placeholder="Write something ..."
               id="floatingTextarea"
-              required
             ></textarea>
             <label className="_feed_textarea_label" htmlFor="floatingTextarea">
               Write something ...

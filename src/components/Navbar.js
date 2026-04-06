@@ -63,7 +63,10 @@ export default function Navbar() {
     }
   };
 
-  const userName = user?.username || 'User';
+  const rawName = (user?.firstName && user?.lastName) 
+    ? `${user.firstName} ${user.lastName}` 
+    : (user?.username || 'User');
+  const userName = rawName.length > 14 ? rawName.slice(0, 14) + '...' : rawName;
   const userPic = getImageUrl(user?.profilePic) || '/images/user_avatar.svg';
 
   useEffect(() => {
@@ -228,7 +231,7 @@ export default function Navbar() {
                     <img src={userPic} alt="Profile" className="_nav_drop_img" />
                   </div>
                   <div className="_nav_profile_dropdown_info_txt">
-                    <h4 className="_nav_dropdown_title">{userName}</h4>
+                    <h4 className="_nav_dropdown_title">{rawName}</h4>
                     <Link href="/profile" className="_nav_drop_profile">View Profile</Link>
                   </div>
                 </div>

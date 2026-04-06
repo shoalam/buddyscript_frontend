@@ -13,6 +13,8 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
@@ -87,12 +89,16 @@ export async function loginAction(prevState, formData) {
 
 export async function registerAction(prevState, formData) {
   const username = formData.get('username');
+  const firstName = formData.get('firstName');
+  const lastName = formData.get('lastName');
   const email = formData.get('email');
   const password = formData.get('password');
   const confirmPassword = formData.get('confirmPassword');
 
   const validatedFields = registerSchema.safeParse({ 
-    username, 
+    username,
+    firstName,
+    lastName,
     email, 
     password, 
     confirmPassword 
@@ -110,7 +116,7 @@ export async function registerAction(prevState, formData) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ username, firstName, lastName, email, password }),
     });
 
     const data = await response.json();
@@ -173,7 +179,14 @@ export async function getMeAction() {
       },
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      return { error: 'Server returned a non-JSON response. It might be overloaded.' };
+    }
+
     if (!response.ok) return { error: data.message || 'Failed to fetch profile' };
 
     return { user: data.user };

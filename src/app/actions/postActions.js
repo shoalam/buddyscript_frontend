@@ -40,7 +40,13 @@ export async function getPostsAction() {
       }
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      return { success: false, error: 'Server returned a non-JSON response. It might be overloaded.' };
+    }
 
     if (!response.ok) {
       return { success: false, error: data.message || 'Failed to fetch posts' };
@@ -63,6 +69,13 @@ export async function getPostsAction() {
 export async function createPostAction(prevState, formData) {
   const cookieStore = await cookies();
   let token = cookieStore.get('token')?.value;
+
+  // Strip empty file field — when no image is selected the browser still
+  // includes a File object with size 0 which triggers multer's type check.
+  const imageFile = formData.get('image');
+  if (!imageFile || typeof imageFile === 'string' || imageFile.size === 0) {
+    formData.delete('image');
+  }
 
   async function performPost(authToken) {
     return fetch(`${API_URL}/api/posts`, {
@@ -98,7 +111,13 @@ export async function createPostAction(prevState, formData) {
       }
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      return { error: 'Server returned a non-JSON response. It might be overloaded.' };
+    }
 
     if (!response.ok) {
       console.error(`[Server Action] Backend error (${response.status}):`, data);
@@ -158,24 +177,41 @@ export async function deletePostAction(postId) {
 }
 
 /**
- * Update post visibility.
+ * Update a post (content, visibility, or image).
  * @param {string} postId 
- * @param {string} visibility 
- * @returns {Promise<{success?: boolean, error?: string}>}
+ * @param {object|FormData} data - plain object for text/visibility or FormData for image uploads
+ * @returns {Promise<{success?: boolean, mediaUrl?: string, error?: string}>}
  */
-export async function updatePostVisibilityAction(postId, visibility) {
+export async function updatePostAction(postId, data) {
   const cookieStore = await cookies();
   let token = cookieStore.get('token')?.value;
 
+  const isFormData = data instanceof FormData;
+
+  // Strip empty image field to prevent multer's type check error
+  if (isFormData) {
+    const imgFile = data.get('image');
+    if (!imgFile || typeof imgFile === 'string' || imgFile.size === 0) {
+      data.delete('image');
+    }
+  }
+
   async function performUpdate(authToken) {
-    return fetch(`${API_URL}/api/posts/${postId}`, {
+    const options = {
       method: 'PUT',
       headers: {
         'Authorization': authToken ? `Bearer ${authToken}` : '',
-        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ visibility }),
-    });
+    };
+
+    if (isFormData) {
+      options.body = data; // Let browser set multipart Content-Type with boundary
+    } else {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(data);
+    }
+
+    return fetch(`${API_URL}/api/posts/${postId}`, options);
   }
 
   try {
@@ -188,16 +224,25 @@ export async function updatePostVisibilityAction(postId, visibility) {
       }
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let resData;
+    if (contentType && contentType.includes('application/json')) {
+      resData = await response.json();
+    } else {
+      return { success: false, error: 'Server returned a non-JSON response.' };
+    }
 
     if (!response.ok) {
-      return { success: false, error: data.message || 'Failed to update visibility' };
+      return { success: false, error: resData.message || 'Failed to update post' };
     }
 
     revalidatePath('/feed');
-    return { success: true };
+    return { 
+      success: true, 
+      mediaUrl: resData.post?.mediaUrl || null 
+    };
   } catch (error) {
-    console.error('[updatePostVisibilityAction] Error:', error);
+    console.error('[updatePostAction] Error:', error);
     return { success: false, error: 'Network error occurred' };
   }
 }

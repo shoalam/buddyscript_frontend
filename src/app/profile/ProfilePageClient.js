@@ -15,6 +15,8 @@ export default function ProfilePageClient({ initialUser }) {
   const fileInputRef = useRef(null);
 
   const [username, setUsername] = useState(initialUser?.username || '');
+  const [firstName, setFirstName] = useState(initialUser?.firstName || '');
+  const [lastName, setLastName] = useState(initialUser?.lastName || '');
   const [email, setEmail] = useState(initialUser?.email || '');
   const [password, setPassword] = useState('');
   const [profilePic, setProfilePic] = useState(null);
@@ -38,6 +40,8 @@ export default function ProfilePageClient({ initialUser }) {
 
     const formData = new FormData();
     formData.append('username', username);
+    formData.append('firstName', firstName);
+    formData.append('lastName', lastName);
     formData.append('email', email);
     
     if (password) {
@@ -127,6 +131,35 @@ export default function ProfilePageClient({ initialUser }) {
                            >
                              Change Profile Picture
                            </button>
+                        </div>
+
+                        <div className="row">
+                           <div className="col-md-6">
+                              <div className="form-group" style={{ marginBottom: '20px' }}>
+                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>First Name</label>
+                                 <input 
+                                   type="text" 
+                                   className="form-control" 
+                                   value={firstName}
+                                   onChange={(e) => setFirstName(e.target.value)}
+                                   required
+                                   style={{ padding: '12px', borderRadius: '6px', border: '1px solid #D5D6D8' }}
+                                 />
+                              </div>
+                           </div>
+                           <div className="col-md-6">
+                              <div className="form-group" style={{ marginBottom: '20px' }}>
+                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Last Name</label>
+                                 <input 
+                                   type="text" 
+                                   className="form-control" 
+                                   value={lastName}
+                                   onChange={(e) => setLastName(e.target.value)}
+                                   required
+                                   style={{ padding: '12px', borderRadius: '6px', border: '1px solid #D5D6D8' }}
+                                 />
+                              </div>
+                           </div>
                         </div>
 
                         <div className="form-group" style={{ marginBottom: '20px' }}>
